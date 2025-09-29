@@ -34,7 +34,7 @@ export class AIService {
 
   async generateQuizQuestions(topic: string, difficulty?: string): Promise<QuizData> {
     try {
-      console.log("[v0] Starting quiz generation with Grok AI", { topic, difficulty })
+      console.log("[QUIZ-AI] Starting quiz generation with Grok AI", { topic, difficulty })
 
       const difficultyInstruction = difficulty
         ? `at ${difficulty} difficulty level`
@@ -50,7 +50,7 @@ export class AIService {
 
       const guidance = difficulty ? difficultyGuidance[difficulty as keyof typeof difficultyGuidance] || "" : ""
 
-      console.log("[v0] Calling generateObject with Grok model")
+      console.log("[QUIZ-AI] Calling generateObject with Grok model")
 
       const quizSchema = z.object({
         questions: z.array(
@@ -78,12 +78,12 @@ export class AIService {
         schema: quizSchema,
       })
 
-      console.log("[v0] Successfully generated quiz questions", result.object)
+      console.log("[QUIZ-AI] Successfully generated quiz questions", result.object)
       return result.object
     } catch (error) {
-      console.error("[v0] Error generating quiz questions:", error)
+      console.error("[QUIZ-AI] Error generating quiz questions:", error)
 
-      console.log("[v0] No fallback questions - returning error to ensure AI generation")
+      console.log("[QUIZ-AI] No fallback questions - returning error to ensure AI generation")
       throw new Error("AI service unavailable. Please ensure you have a stable internet connection and try again.")
     }
   }
@@ -91,7 +91,7 @@ export class AIService {
 
   async generateFeedback(score: number, totalQuestions: number, topic: string): Promise<FeedbackData> {
     try {
-      console.log("[v0] Generating feedback with Grok AI", { score, totalQuestions, topic })
+      console.log("[QUIZ-AI] Generating feedback with Grok AI", { score, totalQuestions, topic })
 
       const percentage = Math.round((score / totalQuestions) * 100)
 
@@ -107,7 +107,7 @@ export class AIService {
         Keep it positive, motivating, and personalized to their score level. Use a friendly, supportive tone. Limit to 2-3 sentences.`,
       })
 
-      console.log("[v0] Successfully generated feedback")
+      console.log("[QUIZ-AI] Successfully generated feedback")
 
       return {
         message: result.text,
@@ -116,7 +116,7 @@ export class AIService {
         encouragement: percentage >= 80 ? "Excellent work!" : percentage >= 60 ? "Good job!" : "Keep learning!",
       }
     } catch (error) {
-      console.error("[v0] Error generating feedback:", error)
+      console.error("[QUIZ-AI] Error generating feedback:", error)
       return {
         message: `You scored ${score} out of ${totalQuestions} questions! Keep up the great work and continue learning.`,
         score,

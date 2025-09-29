@@ -46,7 +46,7 @@ export function QuizInterface({ topic, difficulty, keywords, onComplete }: QuizI
       setIsLoading(true)
       setIsGenerating(true)
 
-      console.log("[v0] Starting quiz generation with:", { topic, difficulty, keywords })
+      console.log("[QUIZ-AI] Starting quiz generation with:", { topic, difficulty, keywords })
 
       // Create quiz session
       const sessionResponse = await fetch("/api/quiz/session", {
@@ -57,12 +57,12 @@ export function QuizInterface({ topic, difficulty, keywords, onComplete }: QuizI
 
       if (!sessionResponse.ok) {
         const errorText = await sessionResponse.text()
-        console.error("[v0] Session creation failed:", errorText)
+        console.error("[QUIZ-AI] Session creation failed:", errorText)
         throw new Error("Failed to create quiz session")
       }
 
       const { session } = await sessionResponse.json()
-      console.log("[v0] Quiz session created:", session.id)
+      console.log("[QUIZ-AI] Quiz session created:", session.id)
       setSessionId(session.id)
 
       const response = await fetch("/api/quiz/generate", {
@@ -78,16 +78,16 @@ export function QuizInterface({ topic, difficulty, keywords, onComplete }: QuizI
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error("[v0] Quiz generation failed:", errorText)
+        console.error("[QUIZ-AI] Quiz generation failed:", errorText)
         throw new Error("Failed to generate quiz questions")
       }
 
       const { questions } = await response.json()
-      console.log("[v0] Received questions from Grok:", questions)
+      console.log("[QUIZ-AI] Received questions from Grok:", questions)
 
       if (Array.isArray(questions) && questions.length > 0) {
         setQuestions(questions)
-        console.log("[v0] Successfully set quiz questions:", questions.length)
+        console.log("[QUIZ-AI] Successfully set quiz questions:", questions.length)
       } else {
         throw new Error("Invalid questions format received")
       }

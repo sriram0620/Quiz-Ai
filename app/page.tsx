@@ -16,7 +16,7 @@ import Link from "next/link"
 export default function Home() {
   return (
     <div className="min-h-screen overflow-hidden scroll-smooth">
-      <div className="bg-gradient-to-r from-rose-500 via-violet-500 to-blue-500 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 animated-gradient relative">
+      <div id="home" className="bg-gradient-to-r from-rose-500 via-violet-500 to-blue-500 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 animated-gradient relative">
         <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] pointer-events-none"></div>
         <div className="absolute top-0 left-0 w-full h-full">
           <div className="absolute top-20 left-1/4 w-96 h-96 bg-gradient-to-r from-rose-500/10 to-violet-600/10 rounded-full filter blur-[100px] animate-pulse"></div>
@@ -78,13 +78,27 @@ export default function Home() {
         </div>
       </div>
 
-      <FeatureSection />
-      <TestimonialSection />
-      <OutreachSection />
-      <InsightsSection />
-      <WorkflowSection />
-      <TestimonialsGrid />
-      <CTASection />
+      <div id="features">
+        <FeatureSection />
+      </div>
+      <div id="testimonials">
+        <TestimonialSection />
+      </div>
+      <div id="outreach">
+        <OutreachSection />
+      </div>
+      <div id="insights">
+        <InsightsSection />
+      </div>
+      <div id="workflow">
+        <WorkflowSection />
+      </div>
+      <div id="about">
+        <TestimonialsGrid />
+      </div>
+      <div id="contact">
+        <CTASection />
+      </div>
       <Footer />
       <FloatingCTA />
       <BackToTop />

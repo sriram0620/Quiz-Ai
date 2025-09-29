@@ -24,7 +24,7 @@ const quizResponseSchema = z.object({
 export async function POST(request: NextRequest) {
   const { topic, difficulty, keywords, sessionId } = await request.json()
 
-  console.log("[v0] Quiz generation request:", { topic, difficulty, keywords, sessionId })
+  console.log("[QUIZ-AI] Quiz generation request:", { topic, difficulty, keywords, sessionId })
 
   if (!topic || !difficulty || !keywords || !sessionId) {
     return new Response("Missing required parameters", { status: 400 })
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   try {
     // Handle mock sessions (when sessionId starts with "mock_session_")
     if (sessionId.startsWith("mock_session_")) {
-      console.log("[v0] Processing mock session:", sessionId)
+      console.log("[QUIZ-AI] Processing mock session:", sessionId)
       // Skip database validation for mock sessions
     } else {
       // Handle real sessions with database validation
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log("[v0] Generating quiz with Grok AI...")
+    console.log("[QUIZ-AI] Generating quiz with Grok AI...")
 
     // Enhanced prompting for better AI generation
     const difficultyGuidance: Record<string, string> = {
@@ -100,11 +100,11 @@ Make each question unique and engaging while maintaining educational value.`,
 - Inclusive and accessible to diverse learners`,
     })
 
-    console.log("[v0] Generated quiz questions:", object.questions.length)
+    console.log("[QUIZ-AI] Generated quiz questions:", object.questions.length)
 
     // Save questions to database (skip for mock sessions)
     if (sessionId.startsWith("mock_session_")) {
-      console.log("[v0] Skipping database save for mock session")
+      console.log("[QUIZ-AI] Skipping database save for mock session")
     } else {
       const questionsToSave = object.questions.map((question, index) => ({
         session_id: sessionId,
@@ -118,17 +118,17 @@ Make each question unique and engaging while maintaining educational value.`,
       const { error: insertError } = await supabase.from("quiz_questions").insert(questionsToSave)
 
       if (insertError) {
-        console.error("[v0] Error saving questions to database:", insertError)
-        console.log("[v0] Continuing without database save due to error")
+        console.error("[QUIZ-AI] Error saving questions to database:", insertError)
+        console.log("[QUIZ-AI] Continuing without database save due to error")
       } else {
-        console.log("[v0] Successfully saved questions to database")
+        console.log("[QUIZ-AI] Successfully saved questions to database")
       }
     }
 
     return Response.json({ questions: object.questions })
   } catch (error: unknown) {
     console.error("Error generating quiz questions with AI:", error)
-    console.error("[v0] Full error details:", {
+    console.error("[QUIZ-AI] Full error details:", {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : "Unknown",
@@ -136,7 +136,7 @@ Make each question unique and engaging while maintaining educational value.`,
 
     // Try with a different model or approach before falling back
     try {
-      console.log("[v0] Retrying with alternative AI model...")
+      console.log("[QUIZ-AI] Retrying with alternative AI model...")
       
       const { object: retryObject } = await generateObject({
         model: "xai/grok-4o-mini", // Fallback to a different model
@@ -145,7 +145,7 @@ Make each question unique and engaging while maintaining educational value.`,
         system: "Generate clear, educational quiz questions with proper multiple choice format."
       })
 
-      console.log("[v0] Successfully generated questions with fallback model")
+      console.log("[QUIZ-AI] Successfully generated questions with fallback model")
       
       // Save retry questions to database (skip for mock sessions)
       if (!sessionId.startsWith("mock_session_")) {
@@ -160,16 +160,16 @@ Make each question unique and engaging while maintaining educational value.`,
 
         const { error: insertError } = await supabase.from("quiz_questions").insert(questionsToSave)
         if (insertError) {
-          console.error("[v0] Error saving retry questions:", insertError)
+          console.error("[QUIZ-AI] Error saving retry questions:", insertError)
         }
       }
 
       return Response.json({ questions: retryObject.questions })
     } catch (retryError: unknown) {
-      console.error("[v0] Retry with alternative model also failed:", retryError)
+      console.error("[QUIZ-AI] Retry with alternative model also failed:", retryError)
       
       // Only now use minimal fallback
-      console.log("[v0] Using minimal fallback questions...")
+      console.log("[QUIZ-AI] Using minimal fallback questions...")
       const fallbackQuestions = generateMinimalFallback(topic, difficulty, keywords)
 
       try {
@@ -186,15 +186,15 @@ Make each question unique and engaging while maintaining educational value.`,
           }))
 
           await fallbackSupabase.from("quiz_questions").insert(questionsToSave)
-          console.log("[v0] Successfully saved minimal fallback questions")
+          console.log("[QUIZ-AI] Successfully saved minimal fallback questions")
         } else {
-          console.log("[v0] Skipping database save for mock session fallback")
+          console.log("[QUIZ-AI] Skipping database save for mock session fallback")
         }
 
         return Response.json({ questions: fallbackQuestions })
       } catch (fallbackError: unknown) {
-        console.error("[v0] Error saving fallback questions:", fallbackError)
-        console.log("[v0] Returning fallback questions without database save")
+        console.error("[QUIZ-AI] Error saving fallback questions:", fallbackError)
+        console.log("[QUIZ-AI] Returning fallback questions without database save")
         return Response.json({ questions: fallbackQuestions })
       }
     }
