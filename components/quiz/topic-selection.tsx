@@ -18,6 +18,7 @@ import {
   Trophy,
   Search,
   CheckCircle2,
+  ArrowLeft,
   ArrowRight,
   Target,
   BarChart3,
@@ -27,7 +28,7 @@ import {
   Layers,
   TrendingUp,
 } from "lucide-react"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useInView } from "react-intersection-observer"
 
@@ -377,7 +378,7 @@ const difficultyLevels = [
   {
     id: "advanced",
     title: "Advanced",
-    description: "Expert level questions for true knowledge seekers",
+    description: "Expert level questions for true knowledge",
     icon: Trophy,
     gradient: "from-red-400 to-rose-400",
     bgColor: "bg-red-50 dark:bg-red-950/20",
@@ -396,7 +397,7 @@ export function TopicSelection() {
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([])
   const [keywordFilter, setKeywordFilter] = useState("")
   const [step, setStep] = useState<"topic" | "difficulty" | "interests" | "confirm">("topic")
-  const [expandedKeywords, setExpandedKeywords] = useState(false)
+  const [expandedKeywords, setExpandedKeywords] = useState(true)
 
   // Animation refs
   const [ref, inView] = useInView({ triggerOnce: false, threshold: 0.1 })
@@ -409,6 +410,28 @@ export function TopicSelection() {
   const handleDifficultySelect = (difficultyId: string) => {
     setSelectedDifficulty(difficultyId)
     setStep("interests")
+  }
+
+  const handleBackToPrevious = () => {
+    switch (step) {
+      case "difficulty":
+        setStep("topic")
+        break
+      case "interests":
+        setStep("difficulty")
+        break
+      case "confirm":
+        setStep("interests")
+        break
+      case "topic":
+        // Go back to main page
+        window.history.back()
+        break
+      default:
+        // Fallback to main page
+        window.history.back()
+        break
+    }
   }
 
   const handleInterestToggle = (interestId: string) => {
@@ -461,13 +484,124 @@ export function TopicSelection() {
       ? allKeywords.filter((keyword) => keyword.toLowerCase().includes(keywordFilter.toLowerCase()))
       : allKeywords
 
-    // Organize keywords into categories for better UX
-    const trending = filtered.slice(0, 8) // First 8 as trending
-    const core = filtered.slice(8, 16) // Next 8 as core concepts
-    const advanced = filtered.slice(16) // Rest as advanced
+    // Create interest-based keyword mapping for better organization
+    const interestKeywordMap = {
+      // Wellness & Health categories - expanded for comprehensive coverage
+      'mental-health': ['anxiety', 'depression', 'therapy', 'mindfulness', 'stress management', 'meditation', 'cognitive behavioral therapy', 'emotional intelligence', 'psychological well-being', 'mental resilience', 'self-care', 'positive psychology', 'behavioral therapy', 'mindful living', 'emotional regulation', 'mental clarity'],
+      'fitness': ['exercise', 'strength training', 'cardio', 'nutrition', 'protein', 'workout', 'muscle building', 'endurance', 'flexibility', 'mobility', 'functional fitness', 'athletic performance', 'recovery techniques', 'injury prevention', 'fitness goals', 'physical conditioning'],
+      'nutrition': ['diet', 'vitamins', 'macronutrients', 'healthy eating', 'supplements', 'metabolism', 'meal planning', 'nutritional science', 'micronutrients', 'dietary fiber', 'hydration', 'food quality', 'nutrient timing', 'digestive health', 'antioxidants', 'balanced nutrition'],
+      'mindfulness': ['meditation', 'mindfulness', 'breathing techniques', 'present moment', 'awareness', 'inner peace', 'consciousness', 'zen', 'mindful breathing', 'body awareness', 'mental focus', 'contemplation', 'spiritual wellness', 'mindful movement', 'stress reduction', 'emotional balance'],
+      'sleep': ['sleep hygiene', 'circadian rhythm', 'insomnia', 'REM sleep', 'sleep cycles', 'melatonin', 'sleep disorders', 'recovery', 'sleep quality', 'sleep environment', 'sleep tracking', 'sleep medicine', 'restorative sleep', 'sleep optimization', 'dream analysis', 'sleep patterns'],
+      
+      // Science & Discovery categories - expanded for richer content
+      'physics': ['quantum mechanics', 'relativity', 'particle physics', 'thermodynamics', 'electromagnetism', 'nuclear physics', 'optics', 'mechanics', 'wave theory', 'string theory', 'photons', 'electrons', 'atoms', 'energy conservation', 'momentum', 'forces'],
+      'biology': ['genetics', 'evolution', 'molecular biology', 'cell biology', 'ecology', 'biochemistry', 'microbiology', 'biotechnology', 'DNA sequencing', 'protein synthesis', 'cellular respiration', 'photosynthesis', 'natural selection', 'biodiversity', 'ecosystems', 'organisms'],
+      'chemistry': ['organic chemistry', 'inorganic chemistry', 'biochemistry', 'analytical chemistry', 'physical chemistry', 'chemical reactions', 'molecules', 'compounds', 'periodic table', 'chemical bonds', 'catalysts', 'acids', 'bases', 'oxidation', 'reduction', 'polymers'],
+      'astronomy': ['cosmology', 'planets', 'space exploration', 'galaxies', 'black holes', 'stars', 'solar system', 'dark matter', 'exoplanets', 'nebulae', 'supernovas', 'quasars', 'cosmic radiation', 'gravitational waves', 'telescopes', 'space missions'],
+      'neuroscience': ['brain science', 'cognition', 'consciousness', 'neural networks', 'synapses', 'neurons', 'memory', 'learning', 'neurotransmitters', 'brain imaging', 'neuroplasticity', 'cognitive psychology', 'behavioral neuroscience', 'brain disorders', 'neural development', 'sensory processing'],
+      
+      // Tech Trends categories
+      'ai-ml': ['artificial intelligence', 'machine learning', 'neural networks', 'deep learning', 'algorithms', 'data science', 'pattern recognition', 'automation'],
+      'blockchain': ['cryptocurrency', 'smart contracts', 'decentralized', 'bitcoin', 'ethereum', 'DeFi', 'NFT', 'consensus'],
+      'cloud': ['AWS', 'Azure', 'serverless', 'microservices', 'containers', 'kubernetes', 'docker', 'scalability'],
+      'cybersecurity': ['encryption', 'firewalls', 'malware', 'phishing', 'data protection', 'privacy', 'security protocols', 'ethical hacking'],
+      'emerging-tech': ['quantum computing', 'AR/VR', 'IoT', '5G', 'robotics', 'edge computing', 'virtual reality', 'augmented reality'],
+      
+      // Cross-category relationships for multi-area selections
+      'interdisciplinary': ['bioinformatics', 'computational biology', 'medical AI', 'quantum chemistry', 'neurotechnology', 'bioengineering', 'cognitive computing', 'digital health']
+    }
+
+    // Get keywords related to selected interests
+    let relatedKeywords = selectedInterests.flatMap(interestId => 
+      interestKeywordMap[interestId as keyof typeof interestKeywordMap] || []
+    )
+    
+    // Add interdisciplinary keywords when multiple areas are selected
+    if (selectedInterests.length > 1) {
+      relatedKeywords = [...relatedKeywords, ...interestKeywordMap.interdisciplinary]
+    }
+
+    // Categorize keywords by relevance level for better organization
+    const highRelevance = filtered.filter(keyword => 
+      relatedKeywords.some(rk => 
+        keyword.toLowerCase().includes(rk.toLowerCase()) || 
+        rk.toLowerCase().includes(keyword.toLowerCase())
+      )
+    )
+    
+    const mediumRelevance = filtered.filter(keyword => 
+      !highRelevance.includes(keyword) && 
+      selectedInterests.some(interestId => {
+        const baseKeywords = interestKeywordMap[interestId as keyof typeof interestKeywordMap] || []
+        return baseKeywords.some(bk => 
+          keyword.toLowerCase().includes(bk.split(' ')[0]) || 
+          bk.split(' ')[0].includes(keyword.toLowerCase())
+        )
+      })
+    )
+    
+    const lowRelevance = filtered.filter(keyword => 
+      !highRelevance.includes(keyword) && !mediumRelevance.includes(keyword)
+    )
+
+    // Dynamic sizing based on number of selected interests - more generous base sizes
+    const selectedCount = selectedInterests.length
+    const hasSelections = selectedCount > 0
+    
+    // More generous base sizes and scaling
+    const baseMultiplier = hasSelections ? Math.max(1.5, selectedCount * 0.8) : 1
+    
+    // Calculate dynamic sizes with generous minimums
+    const trendingSize = hasSelections 
+      ? Math.min(Math.floor(10 * baseMultiplier), Math.max(16, highRelevance.length + mediumRelevance.length))
+      : 8
+    const coreSize = hasSelections 
+      ? Math.min(Math.floor(16 * baseMultiplier), 24) // Increased from 20 to 24
+      : 12
+    const advancedSize = hasSelections 
+      ? Math.min(Math.floor(12 * baseMultiplier), 20) // Increased from 16 to 20
+      : 8
+
+    // Organize keywords with smart distribution - ensure rich content
+    const trending = [
+      ...highRelevance.slice(0, Math.ceil(trendingSize * 0.7)),
+      ...mediumRelevance.slice(0, Math.floor(trendingSize * 0.3))
+    ].slice(0, trendingSize)
+
+    // More generous core distribution
+    const usedInTrending = trending.length
+    const remainingHigh = highRelevance.slice(trending.filter(t => highRelevance.includes(t)).length)
+    const remainingMedium = mediumRelevance.slice(trending.filter(t => mediumRelevance.includes(t)).length)
+    
+    const core = [
+      ...remainingHigh.slice(0, Math.ceil(coreSize * 0.5)), // 50% high relevance
+      ...remainingMedium.slice(0, Math.ceil(coreSize * 0.3)), // 30% medium relevance
+      ...lowRelevance.slice(0, Math.floor(coreSize * 0.2)) // 20% foundational
+    ].slice(0, coreSize)
+
+    // Advanced topics with better variety
+    const usedKeywords = [...trending, ...core]
+    const remainingKeywords = filtered.filter(k => !usedKeywords.includes(k))
+    
+    const advanced = [
+      ...remainingMedium.filter(k => !usedKeywords.includes(k)).slice(0, Math.ceil(advancedSize * 0.6)),
+      ...lowRelevance.filter(k => !usedKeywords.includes(k)).slice(0, Math.floor(advancedSize * 0.4))
+    ].slice(0, advancedSize)
 
     return { trending, core, advanced }
-  }, [selectedTopicData, keywordFilter])
+  }, [selectedTopicData, keywordFilter, selectedInterests])
+
+  // Auto-select trending keywords based on selected interests
+  useEffect(() => {
+    if (selectedInterests.length > 0 && organizedKeywords.trending.length > 0) {
+      const autoSelectedKeywords = organizedKeywords.trending.slice(0, 6) // Auto-select first 6 trending
+      const newKeywords = autoSelectedKeywords.filter(keyword => !selectedKeywords.includes(keyword))
+      
+      if (newKeywords.length > 0) {
+        setSelectedKeywords(prev => [...prev, ...newKeywords])
+      }
+    }
+  }, [selectedInterests, organizedKeywords.trending])
 
   // Animation variants
   const containerVariants = {
@@ -507,7 +641,8 @@ export function TopicSelection() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-rose-500 via-violet-500 to-blue-500 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 animated-gradient relative">
+    <div className="min-h-screen bg-gradient-to-r from-rose-500 via-violet-500 to-blue-500 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 animated-gradient relative
+      light:bg-gradient-to-br light:from-gray-50 light:via-white light:to-gray-100">
       <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] pointer-events-none"></div>
       <div className="absolute top-0 left-0 w-full h-full">
         <div className="absolute top-20 left-1/4 w-96 h-96 bg-gradient-to-r from-rose-500/10 to-violet-600/10 rounded-full filter blur-[100px] animate-pulse"></div>
@@ -547,16 +682,17 @@ export function TopicSelection() {
                 },
               }}
             >
-              <Brain className="w-10 h-10 text-white" />
+              <Brain className="w-10 h-10 text-white dark:text-white light:text-gray-800" />
             </motion.div>
             <motion.h1
-              className="text-white dark:text-gray-100 text-5xl md:text-7xl font-bold mb-8 max-w-5xl mx-auto leading-tight tracking-tight"
+              className="text-white dark:text-gray-100 light:text-gray-800 text-5xl md:text-7xl font-bold mb-8 max-w-5xl mx-auto leading-tight tracking-tight"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
               Test Your{" "}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80 dark:from-violet-400 dark:to-indigo-500">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80 dark:from-violet-400 dark:to-indigo-500
+                light:from-gray-800 light:to-gray-600">
                 Knowledge
               </span>{" "}
               with
@@ -564,7 +700,7 @@ export function TopicSelection() {
               AI-Powered Quizzes
             </motion.h1>
             <motion.p
-              className="text-white dark:text-gray-200 text-xl md:text-2xl mb-14 max-w-3xl mx-auto leading-relaxed"
+              className="text-white dark:text-gray-200 light:text-gray-600 text-xl md:text-2xl mb-14 max-w-3xl mx-auto leading-relaxed"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
@@ -647,6 +783,16 @@ export function TopicSelection() {
                   <Badge className="bg-white/20 text-white border-white/30 px-6 py-3 text-base font-medium">
                     Step 1 of 4: Choose Your Topic
                   </Badge>
+                  <div className="mt-6 flex justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={handleBackToPrevious}
+                      className="bg-white/20 hover:bg-white/30 text-white border-white/40 hover:border-white/60 px-6 py-3 rounded-xl transition-all duration-300 flex items-center space-x-3 quiz-back-button shadow-lg hover:shadow-xl"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                      <span className="font-medium">Back to Main Page</span>
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -664,7 +810,7 @@ export function TopicSelection() {
                         whileTap={{ scale: 0.98 }}
                       >
                         <Card
-                          className="group cursor-pointer transition-all duration-300 glass-card premium-shadow h-full overflow-hidden"
+                          className="group cursor-pointer transition-all duration-300 quiz-card quiz-card-glow hover:quiz-card-float h-full overflow-hidden"
                           onClick={() => handleTopicSelect(topic.id)}
                         >
                           <CardHeader className="pb-4 relative">
@@ -679,10 +825,10 @@ export function TopicSelection() {
                             >
                               <IconComponent className="w-8 h-8 text-white" />
                             </motion.div>
-                            <CardTitle className="text-2xl font-bold text-white group-hover:text-white/90 transition-colors relative z-10">
+                            <CardTitle className="text-2xl font-bold quiz-card-title relative z-10">
                               {topic.title}
                             </CardTitle>
-                            <CardDescription className="text-white/80 leading-relaxed text-base relative z-10">
+                            <CardDescription className="quiz-card-description leading-relaxed text-base relative z-10">
                               {topic.description}
                             </CardDescription>
                           </CardHeader>
@@ -693,8 +839,8 @@ export function TopicSelection() {
                               whileHover={{ opacity: 1 }}
                               transition={{ duration: 0.2 }}
                             >
-                              <p className="text-sm text-white/70 mb-3 font-medium flex items-center">
-                                <Target className="w-4 h-4 mr-2" />
+                              <p className="text-sm text-white/70 dark:text-white/70 light:text-gray-600 mb-3 font-medium flex items-center">
+                                <Target className="w-4 h-4 mr-2 text-white/70 dark:text-white/70 light:text-gray-600" />
                                 Popular Topics:
                               </p>
                               <div className="flex flex-wrap gap-2">
@@ -706,20 +852,20 @@ export function TopicSelection() {
                                     transition={{ delay: idx * 0.05 }}
                                     whileHover={{ scale: 1.05 }}
                                   >
-                                    <Badge className="bg-white/20 text-white border-white/30 text-xs px-2 py-1 hover:bg-white/30 transition-all cursor-pointer">
+                                    <Badge className="quiz-card-badge text-xs px-2 py-1 hover:bg-white/30 dark:hover:bg-white/30 light:hover:bg-gray-200 transition-all cursor-pointer">
                                       {keyword}
                                     </Badge>
                                   </motion.div>
                                 ))}
                                 {topic.keywords.length > 6 && (
-                                  <Badge className="bg-white/20 text-white border-white/30 text-xs px-2 py-1">
+                                  <Badge className="quiz-card-badge text-xs px-2 py-1">
                                     +{topic.keywords.length - 6} more
                                   </Badge>
                                 )}
                               </div>
                             </motion.div>
                             <Button
-                              className={`w-full bg-gradient-to-r ${topic.gradient} hover:opacity-90 text-white font-semibold py-3 text-lg transition-all duration-300 group-hover:shadow-lg border-0`}
+                              className={`w-full quiz-card-button font-semibold py-3 text-lg transition-all duration-300 group-hover:shadow-lg border-0`}
                               disabled={state.isLoading}
                             >
                               Select Topic
@@ -748,6 +894,16 @@ export function TopicSelection() {
                   <Badge className="bg-white/20 text-white border-white/30 px-6 py-3 text-base font-medium">
                     Step 2 of 4: Choose Difficulty Level
                   </Badge>
+                  <div className="mt-4">
+                    <Button
+                      variant="ghost"
+                      onClick={handleBackToPrevious}
+                      className="text-white/70 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2 mx-auto quiz-back-button"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Back to Topic Selection</span>
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Selected Topic Display */}
@@ -788,7 +944,7 @@ export function TopicSelection() {
                         whileTap={{ scale: 0.98 }}
                       >
                         <Card
-                          className="group cursor-pointer transition-all duration-500 bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/15 hover:border-white/30 h-full"
+                          className="group cursor-pointer transition-all duration-500 quiz-card quiz-card-glow hover:quiz-card-float h-full"
                           onClick={() => handleDifficultySelect(difficulty.id)}
                         >
                           <CardHeader className="pb-4 text-center">
@@ -802,30 +958,30 @@ export function TopicSelection() {
                             >
                               <IconComponent className="w-8 h-8 text-white" />
                             </motion.div>
-                            <CardTitle className="text-2xl font-bold text-white group-hover:text-white/90 transition-colors">
+                            <CardTitle className="text-2xl font-bold quiz-card-title">
                               {difficulty.title}
                             </CardTitle>
-                            <CardDescription className="text-white/80 leading-relaxed text-base">
+                            <CardDescription className="quiz-card-description leading-relaxed text-base">
                               {difficulty.description}
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="pt-0 text-center space-y-4">
                             <div className="space-y-3">
-                              <Badge className="bg-white/20 text-white border-white/30 text-sm px-3 py-1">
+                              <Badge className="quiz-card-badge text-sm px-3 py-1">
                                 {difficulty.level}
                               </Badge>
-                              <p className="text-white/70 text-sm font-medium">{difficulty.questions}</p>
+                              <p className="text-white/70 dark:text-white/70 light:text-gray-600 text-sm font-medium">{difficulty.questions}</p>
                               <div className="space-y-2">
                                 {difficulty.features.map((feature, idx) => (
                                   <div key={idx} className="flex items-center justify-center space-x-2">
-                                    <CheckCircle2 className="w-4 h-4 text-white/60" />
-                                    <span className="text-white/70 text-sm">{feature}</span>
+                                    <CheckCircle2 className="w-4 h-4 text-white/60 dark:text-white/60 light:text-gray-500" />
+                                    <span className="text-white/70 dark:text-white/70 light:text-gray-600 text-sm">{feature}</span>
                                   </div>
                                 ))}
                               </div>
                             </div>
                             <Button
-                              className={`w-full bg-gradient-to-r ${difficulty.gradient} hover:opacity-90 text-white font-semibold py-3 text-lg transition-all duration-300 group-hover:shadow-lg border-0`}
+                              className={`w-full quiz-card-button font-semibold py-3 text-lg transition-all duration-300 group-hover:shadow-lg border-0`}
                               disabled={state.isLoading}
                             >
                               Select {difficulty.title}
@@ -854,6 +1010,16 @@ export function TopicSelection() {
                   <Badge className="bg-white/20 text-white border-white/30 px-6 py-3 text-base font-medium">
                     Step 3 of 4: Select Your Interest Areas
                   </Badge>
+                  <div className="mt-4">
+                    <Button
+                      variant="ghost"
+                      onClick={handleBackToPrevious}
+                      className="text-white/70 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2 mx-auto quiz-back-button"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Back to Difficulty Selection</span>
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Current Selections */}
@@ -868,20 +1034,20 @@ export function TopicSelection() {
                       <div
                         className={`inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-r ${selectedTopicData.gradient} mb-2`}
                       >
-                        <selectedTopicData.icon className="w-6 h-6 text-white" />
+                        <selectedTopicData.icon className="w-6 h-6 text-white dark:text-white light:text-gray-800" />
                       </div>
-                      <p className="text-white/70 text-sm">Topic</p>
-                      <p className="text-white font-semibold">{selectedTopicData.title}</p>
+                      <p className="text-white/70 dark:text-white/70 light:text-gray-600 text-sm">Topic</p>
+                      <p className="text-white dark:text-white light:text-gray-800 font-semibold">{selectedTopicData.title}</p>
                     </div>
                     <div className="w-px h-12 bg-white/20"></div>
                     <div className="text-center">
                       <div
                         className={`inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-r ${selectedDifficultyData.gradient} mb-2`}
                       >
-                        <selectedDifficultyData.icon className="w-6 h-6 text-white" />
+                        <selectedDifficultyData.icon className="w-6 h-6 text-white dark:text-white light:text-gray-800" />
                       </div>
-                      <p className="text-white/70 text-sm">Difficulty</p>
-                      <p className="text-white font-semibold capitalize">{selectedDifficulty}</p>
+                      <p className="text-white/70 dark:text-white/70 light:text-gray-600 text-sm">Difficulty</p>
+                      <p className="text-white dark:text-white light:text-gray-800 font-semibold capitalize">{selectedDifficulty}</p>
                     </div>
                   </div>
                   <div className="text-center">
@@ -911,16 +1077,16 @@ export function TopicSelection() {
                         whileTap={{ scale: 0.98 }}
                       >
                         <Card
-                          className={`group cursor-pointer transition-all duration-300 border-2 ${
+                          className={`group cursor-pointer transition-all duration-300 quiz-card quiz-card-glow hover:quiz-card-float border-2 ${
                             isSelected
-                              ? "glass-card border-white/40 shadow-lg"
-                              : "glass-card border-white/20 hover:bg-white/15 hover:border-white/30"
+                              ? "quiz-card-selected border-white/40 shadow-lg"
+                              : "border-white/20"
                           }`}
                           onClick={() => handleInterestToggle(interest.id)}
                         >
                           <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
-                              <CardTitle className="text-lg font-semibold text-white">{interest.name}</CardTitle>
+                              <CardTitle className="text-lg font-semibold quiz-card-title">{interest.name}</CardTitle>
                               <motion.div
                                 animate={{
                                   scale: isSelected ? 1.2 : 1,
@@ -933,7 +1099,7 @@ export function TopicSelection() {
                                 />
                               </motion.div>
                             </div>
-                            <CardDescription className="text-white/70 text-sm leading-relaxed">
+                            <CardDescription className="quiz-card-description text-sm leading-relaxed">
                               {interest.description}
                             </CardDescription>
                           </CardHeader>
@@ -944,30 +1110,60 @@ export function TopicSelection() {
                 </div>
 
                 <motion.div
-                  className="p-6 glass-card rounded-2xl border border-white/20"
+                  className="p-6 keyword-section rounded-2xl"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
                 >
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-bold text-white flex items-center">
-                      <Filter className="w-6 h-6 mr-3" />
+                    <h3 className="text-xl font-bold text-white dark:text-white light:text-gray-800 flex items-center">
+                      <Filter className="w-6 h-6 mr-3 text-white dark:text-white light:text-gray-800" />
                       Keyword Focus Areas
                     </h3>
                     <div className="flex items-center space-x-3">
-                      <Badge className="bg-white/20 text-white border-white/30 px-3 py-1">
+                      <Badge className="quiz-card-badge px-3 py-1">
                         {selectedKeywords.length} selected
                       </Badge>
+                      {selectedInterests.length > 0 && (
+                        <Badge className="bg-green-500/20 text-green-400 border-green-400/30 px-3 py-1 text-xs">
+                          Auto-selected for you
+                        </Badge>
+                      )}
+                      {selectedInterests.length > 1 && (
+                        <Badge className="bg-purple-500/20 text-purple-400 border-purple-400/30 px-3 py-1 text-xs">
+                          {organizedKeywords.trending.length + organizedKeywords.core.length + organizedKeywords.advanced.length} total options
+                        </Badge>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setExpandedKeywords(!expandedKeywords)}
-                        className="text-white/70 hover:text-white hover:bg-white/10 p-2"
+                        className="text-white/70 dark:text-white/70 light:text-gray-600 hover:text-white dark:hover:text-white light:hover:text-gray-800 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-gray-200 p-2"
                       >
                         {expandedKeywords ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                       </Button>
                     </div>
                   </div>
+
+                  {/* Dynamic Options Info */}
+                  {selectedInterests.length > 0 && (
+                    <motion.div
+                      className="mb-4 p-3 bg-purple-500/10 border border-purple-400/20 rounded-lg"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.4 }}
+                    >
+                      <div className="flex items-center space-x-2 text-sm">
+                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                        <span className="text-purple-300 dark:text-purple-300 light:text-purple-600 font-medium">
+                          {selectedInterests.length === 1 
+                            ? `Rich options for ${selectedInterests.length} area • Showing ${organizedKeywords.trending.length + organizedKeywords.core.length + organizedKeywords.advanced.length} relevant keywords`
+                            : `Expanded options: ${selectedInterests.length} areas selected • Showing ${organizedKeywords.trending.length + organizedKeywords.core.length + organizedKeywords.advanced.length} relevant keywords`
+                          }
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
 
                   {/* Enhanced Keyword Search */}
                   <motion.div
@@ -977,12 +1173,12 @@ export function TopicSelection() {
                     transition={{ delay: 0.6 }}
                   >
                     <div className="relative">
-                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 dark:text-white/60 light:text-gray-500 w-5 h-5" />
                       <Input
                         placeholder="Search keywords to focus your quiz..."
                         value={keywordFilter}
                         onChange={(e) => setKeywordFilter(e.target.value)}
-                        className="pl-12 pr-4 py-3 bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:border-white/40 text-base"
+                        className="pl-12 pr-4 py-3 bg-white/10 dark:bg-white/10 light:bg-gray-100 border-white/20 dark:border-white/20 light:border-gray-300 text-white dark:text-white light:text-gray-800 placeholder:text-white/60 dark:placeholder:text-white/60 light:placeholder:text-gray-500 focus:border-white/40 dark:focus:border-white/40 light:focus:border-gray-400 text-base"
                       />
                     </div>
                   </motion.div>
@@ -999,9 +1195,14 @@ export function TopicSelection() {
                         {/* Trending Keywords */}
                         {organizedKeywords.trending.length > 0 && (
                           <div>
-                            <div className="flex items-center mb-3">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center">
                               <TrendingUp className="w-4 h-4 text-rose-400 mr-2" />
-                              <h4 className="text-white font-semibold">Trending Topics</h4>
+                                <h4 className="text-white dark:text-white light:text-gray-800 font-semibold">Trending Topics</h4>
+                              </div>
+                              <Badge className="bg-rose-500/20 text-rose-400 border-rose-400/30 px-2 py-1 text-xs">
+                                {organizedKeywords.trending.length} items
+                              </Badge>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                               {organizedKeywords.trending.map((keyword, idx) => {
@@ -1018,11 +1219,11 @@ export function TopicSelection() {
                                       id={`trending-${keyword}`}
                                       checked={isSelected}
                                       onCheckedChange={() => handleKeywordToggle(keyword)}
-                                      className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:border-white"
+                                      className="keyword-checkbox"
                                     />
                                     <label
                                       htmlFor={`trending-${keyword}`}
-                                      className="text-sm text-white/90 cursor-pointer flex-1 capitalize"
+                                      className="text-sm keyword-label cursor-pointer flex-1 capitalize"
                                     >
                                       {keyword}
                                     </label>
@@ -1036,9 +1237,14 @@ export function TopicSelection() {
                         {/* Core Keywords */}
                         {organizedKeywords.core.length > 0 && (
                           <div>
-                            <div className="flex items-center mb-3">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center">
                               <Layers className="w-4 h-4 text-blue-400 mr-2" />
-                              <h4 className="text-white font-semibold">Core Concepts</h4>
+                                <h4 className="text-white dark:text-white light:text-gray-800 font-semibold">Core Concepts</h4>
+                              </div>
+                              <Badge className="bg-blue-500/20 text-blue-400 border-blue-400/30 px-2 py-1 text-xs">
+                                {organizedKeywords.core.length} items
+                              </Badge>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                               {organizedKeywords.core.map((keyword, idx) => {
@@ -1055,11 +1261,11 @@ export function TopicSelection() {
                                       id={`core-${keyword}`}
                                       checked={isSelected}
                                       onCheckedChange={() => handleKeywordToggle(keyword)}
-                                      className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:border-white"
+                                      className="keyword-checkbox"
                                     />
                                     <label
                                       htmlFor={`core-${keyword}`}
-                                      className="text-sm text-white/90 cursor-pointer flex-1 capitalize"
+                                      className="text-sm keyword-label cursor-pointer flex-1 capitalize"
                                     >
                                       {keyword}
                                     </label>
@@ -1073,9 +1279,14 @@ export function TopicSelection() {
                         {/* Advanced Keywords */}
                         {organizedKeywords.advanced.length > 0 && (
                           <div>
-                            <div className="flex items-center mb-3">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center">
                               <Trophy className="w-4 h-4 text-yellow-400 mr-2" />
-                              <h4 className="text-white font-semibold">Advanced Topics</h4>
+                                <h4 className="text-white dark:text-white light:text-gray-800 font-semibold">Advanced Topics</h4>
+                              </div>
+                              <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-400/30 px-2 py-1 text-xs">
+                                {organizedKeywords.advanced.length} items
+                              </Badge>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto">
                               {organizedKeywords.advanced.map((keyword, idx) => {
@@ -1092,11 +1303,11 @@ export function TopicSelection() {
                                       id={`advanced-${keyword}`}
                                       checked={isSelected}
                                       onCheckedChange={() => handleKeywordToggle(keyword)}
-                                      className="border-white/30 data-[state=checked]:bg-white data-[state=checked]:border-white"
+                                      className="keyword-checkbox"
                                     />
                                     <label
                                       htmlFor={`advanced-${keyword}`}
-                                      className="text-sm text-white/90 cursor-pointer flex-1 capitalize"
+                                      className="text-sm keyword-label cursor-pointer flex-1 capitalize"
                                     >
                                       {keyword}
                                     </label>
@@ -1165,7 +1376,7 @@ export function TopicSelection() {
                     <Button
                       onClick={handleContinueToConfirm}
                       disabled={selectedInterests.length === 0}
-                      className="bg-gradient-to-r from-rose-500 to-violet-500 hover:from-rose-600 hover:to-violet-600 text-white font-semibold px-8 py-3 text-lg border-0 disabled:opacity-50"
+                      className="bg-gradient-to-r from-rose-500 to-violet-500 hover:from-rose-600 hover:to-violet-600 text-white dark:text-white light:text-gray-800 font-semibold px-8 py-3 text-lg border-0 disabled:opacity-50"
                       size="lg"
                     >
                       Continue ({selectedInterests.length} areas, {selectedKeywords.length} keywords)
@@ -1190,6 +1401,16 @@ export function TopicSelection() {
                   <Badge className="bg-white/20 text-white border-white/30 px-6 py-3 text-base font-medium">
                     Step 4 of 4: Ready to Begin!
                   </Badge>
+                  <div className="mt-4">
+                    <Button
+                      variant="ghost"
+                      onClick={handleBackToPrevious}
+                      className="text-white/70 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2 mx-auto quiz-back-button"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Back to Interest Selection</span>
+                    </Button>
+                  </div>
                 </div>
 
                 <motion.div
@@ -1204,7 +1425,7 @@ export function TopicSelection() {
                       variants={floatingVariants}
                       animate="animate"
                     >
-                      <Trophy className="w-10 h-10 text-white" />
+                      <Trophy className="w-10 h-10 text-white dark:text-white light:text-gray-800" />
                     </motion.div>
                     <h2 className="text-3xl font-bold text-white mb-4">Your Personalized Quiz is Ready!</h2>
                   </div>
@@ -1215,102 +1436,267 @@ export function TopicSelection() {
                       <div
                         className={`inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-r ${selectedTopicData.gradient} mb-3`}
                       >
-                        <selectedTopicData.icon className="w-6 h-6 text-white" />
+                        <selectedTopicData.icon className="w-6 h-6 text-white dark:text-white light:text-gray-800" />
                       </div>
-                      <p className="text-white/70 text-sm">Topic</p>
-                      <p className="text-white font-semibold">{selectedTopicData.title}</p>
+                      <p className="text-white/70 dark:text-white/70 light:text-gray-600 text-sm">Topic</p>
+                      <p className="text-white dark:text-white light:text-gray-800 font-semibold">{selectedTopicData.title}</p>
                     </div>
                     <div className="text-center p-4 bg-white/10 rounded-xl border border-white/20">
                       <div
                         className={`inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-r ${selectedDifficultyData.gradient} mb-3`}
                       >
-                        <selectedDifficultyData.icon className="w-6 h-6 text-white" />
+                        <selectedDifficultyData.icon className="w-6 h-6 text-white dark:text-white light:text-gray-800" />
                       </div>
-                      <p className="text-white/70 text-sm">Difficulty</p>
-                      <p className="text-white font-semibold capitalize">{selectedDifficulty}</p>
+                      <p className="text-white/70 dark:text-white/70 light:text-gray-600 text-sm">Difficulty</p>
+                      <p className="text-white dark:text-white light:text-gray-800 font-semibold capitalize">{selectedDifficulty}</p>
                     </div>
                     <div className="text-center p-4 bg-white/10 rounded-xl border border-white/20">
                       <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-r from-green-400 to-emerald-400 mb-3">
-                        <BarChart3 className="w-6 h-6 text-white" />
+                        <BarChart3 className="w-6 h-6 text-white dark:text-white light:text-gray-800" />
                       </div>
-                      <p className="text-white/70 text-sm">Focus Areas</p>
-                      <p className="text-white font-semibold">{selectedInterests.length} selected</p>
+                      <p className="text-white/70 dark:text-white/70 light:text-gray-600 text-sm">Focus Areas</p>
+                      <p className="text-white dark:text-white light:text-gray-800 font-semibold">{selectedInterests.length} selected</p>
                     </div>
                   </div>
 
                   {/* Selected Interest Areas */}
-                  <div className="mb-8 p-6 bg-white/10 rounded-xl border border-white/20">
-                    <h3 className="text-white font-semibold mb-4 flex items-center">
-                      <Target className="w-5 h-5 mr-2" />
+                  <motion.div 
+                    className="mb-8 p-6 bg-white/10 dark:bg-white/10 light:bg-gray-100 rounded-xl border border-white/20 dark:border-white/20 light:border-gray-300 selected-areas-section"
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  >
+                    <motion.div 
+                      className="flex items-center mb-4"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2, duration: 0.4 }}
+                    >
+                      <motion.div
+                        className="mr-3"
+                        animate={{ 
+                          rotate: [0, 5, -5, 0],
+                          scale: [1, 1.1, 1]
+                        }}
+                        transition={{ 
+                          duration: 2,
+                          repeat: Infinity,
+                          repeatDelay: 3
+                        }}
+                      >
+                        <Target className="w-5 h-5 text-white dark:text-white light:text-gray-800" />
+                      </motion.div>
+                      <h3 className="text-white dark:text-white light:text-gray-900 font-semibold">
                       Your Focus Areas:
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {selectedInterests.map((interestId) => {
+                    </motion.div>
+                    
+                    <motion.div 
+                      className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.3, duration: 0.4 }}
+                    >
+                      {selectedInterests.map((interestId, index) => {
                         const interest = selectedTopicData.interestAreas.find((i) => i.id === interestId)
                         return interest ? (
                           <motion.div
                             key={interestId}
-                            className="flex items-center space-x-3 p-3 bg-white/10 rounded-lg border border-white/20"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: selectedInterests.indexOf(interestId) * 0.1 }}
+                            className="flex items-center space-x-3 p-3 bg-white/10 dark:bg-white/10 light:bg-white rounded-lg border border-white/20 dark:border-white/20 light:border-gray-300 hover:shadow-lg transition-all duration-300 selected-area-item"
+                            initial={{ 
+                              opacity: 0, 
+                              x: -30, 
+                              y: 20,
+                              scale: 0.8,
+                              rotateX: -15
+                            }}
+                            animate={{ 
+                              opacity: 1, 
+                              x: 0, 
+                              y: 0,
+                              scale: 1,
+                              rotateX: 0
+                            }}
+                            transition={{ 
+                              delay: index * 0.15,
+                              duration: 0.6,
+                              ease: "easeOut",
+                              type: "spring",
+                              stiffness: 100,
+                              damping: 15
+                            }}
+                            whileHover={{
+                              scale: 1.02,
+                              y: -2,
+                              boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                              transition: { duration: 0.2 }
+                            }}
+                            whileTap={{ 
+                              scale: 0.98,
+                              transition: { duration: 0.1 }
+                            }}
                           >
-                            <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
-                            <div>
-                              <p className="text-white font-medium text-sm">{interest.name}</p>
-                              <p className="text-white/70 text-xs">{interest.description}</p>
-                            </div>
+                            <motion.div
+                              animate={{ 
+                                rotate: [0, 10, -10, 0],
+                                scale: [1, 1.1, 1]
+                              }}
+                              transition={{ 
+                                duration: 1.5,
+                                repeat: Infinity,
+                                repeatDelay: 2,
+                                delay: index * 0.2
+                              }}
+                          >
+                              <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 selected-area-icon" />
+                            </motion.div>
+                            <motion.div
+                              initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.15 + 0.3, duration: 0.4 }}
+                            >
+                              <motion.p 
+                                className="text-white dark:text-white light:text-gray-900 font-medium text-sm"
+                                whileHover={{ color: "#10b981" }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                {interest.name}
+                              </motion.p>
+                              <motion.p 
+                                className="text-white/70 dark:text-white/70 light:text-gray-700 text-xs"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: index * 0.15 + 0.5, duration: 0.3 }}
+                              >
+                                {interest.description}
+                              </motion.p>
+                            </motion.div>
                           </motion.div>
                         ) : null
                       })}
-                    </div>
-                  </div>
+                    </motion.div>
+                  </motion.div>
 
                   {/* Selected Keywords */}
                   {selectedKeywords.length > 0 && (
-                    <div className="mb-8 p-6 bg-white/10 rounded-xl border border-white/20">
-                      <h3 className="text-white font-semibold mb-4 flex items-center">
-                        <Filter className="w-5 h-5 mr-2" />
+                    <motion.div 
+                      className="mb-8 p-6 bg-white/10 dark:bg-white/10 light:bg-gray-100 rounded-xl border border-white/20 dark:border-white/20 light:border-gray-300 keyword-focus-section"
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
+                    >
+                      <motion.div 
+                        className="flex items-center mb-4"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2, duration: 0.4 }}
+                      >
+                        <motion.div
+                          className="mr-3"
+                          animate={{ 
+                            rotate: [0, 5, -5, 0],
+                            scale: [1, 1.1, 1]
+                          }}
+                          transition={{ 
+                            duration: 2,
+                            repeat: Infinity,
+                            repeatDelay: 3
+                          }}
+                        >
+                          <Filter className="w-5 h-5 text-white dark:text-white light:text-gray-800" />
+                        </motion.div>
+                        <h3 className="text-white dark:text-white light:text-gray-900 font-semibold">
                         Your Keyword Focus:
                       </h3>
-                      <div className="flex flex-wrap gap-2">
+                      </motion.div>
+                      
+                      <motion.div 
+                        className="flex flex-wrap gap-2"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3, duration: 0.4 }}
+                      >
                         {selectedKeywords.map((keyword, idx) => (
                           <motion.div
                             key={keyword}
-                            className="flex items-center space-x-3 p-3 bg-white/10 rounded-lg border border-white/20"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.1 }}
+                            className="flex items-center space-x-2 p-2 bg-white/10 dark:bg-white/10 light:bg-white rounded-lg border border-white/20 dark:border-white/20 light:border-gray-300 hover:shadow-md transition-all duration-300 keyword-focus-item"
+                            initial={{ 
+                              opacity: 0, 
+                              x: -20, 
+                              y: 10,
+                              scale: 0.8
+                            }}
+                            animate={{ 
+                              opacity: 1, 
+                              x: 0, 
+                              y: 0,
+                              scale: 1
+                            }}
+                            transition={{ 
+                              delay: idx * 0.08,
+                              duration: 0.4,
+                              ease: "easeOut",
+                              type: "spring",
+                              stiffness: 120,
+                              damping: 12
+                            }}
+                            whileHover={{
+                              scale: 1.05,
+                              y: -1,
+                              boxShadow: "0 5px 15px rgba(0,0,0,0.1)",
+                              transition: { duration: 0.2 }
+                            }}
+                            whileTap={{ 
+                              scale: 0.95,
+                              transition: { duration: 0.1 }
+                            }}
                           >
-                            <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
-                            <div>
-                              <p className="text-white font-medium text-sm capitalize">{keyword}</p>
-                            </div>
+                            <motion.div
+                              animate={{ 
+                                rotate: [0, 8, -8, 0],
+                                scale: [1, 1.1, 1]
+                              }}
+                              transition={{ 
+                                duration: 1.2,
+                                repeat: Infinity,
+                                repeatDelay: 1.5,
+                                delay: idx * 0.1
+                              }}
+                            >
+                              <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" />
+                            </motion.div>
+                            <motion.p 
+                              className="text-white dark:text-white light:text-gray-900 font-medium text-sm capitalize"
+                              whileHover={{ color: "#10b981" }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              {keyword}
+                            </motion.p>
                           </motion.div>
                         ))}
-                      </div>
-                    </div>
+                      </motion.div>
+                    </motion.div>
                   )}
 
                   {/* Quiz Features */}
                   <div className="mb-8 p-6 bg-white/10 rounded-xl border border-white/20">
-                    <h3 className="text-white font-semibold mb-4">What to Expect:</h3>
+                    <h3 className="text-white dark:text-white light:text-gray-800 font-semibold mb-4">What to Expect:</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center space-x-3">
                         <Brain className="w-5 h-5 text-violet-400" />
-                        <span className="text-white/80 text-sm">AI-generated questions tailored to your interests</span>
+                        <span className="text-white/80 dark:text-white/80 light:text-gray-600 text-sm">AI-generated questions tailored to your interests</span>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Zap className="w-5 h-5 text-yellow-400" />
-                        <span className="text-white/80 text-sm">Instant feedback and explanations</span>
+                        <span className="text-white/80 dark:text-white/80 light:text-gray-600 text-sm">Instant feedback and explanations</span>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Target className="w-5 h-5 text-green-400" />
-                        <span className="text-white/80 text-sm">Personalized difficulty based on your level</span>
+                        <span className="text-white/80 dark:text-white/80 light:text-gray-600 text-sm">Personalized difficulty based on your level</span>
                       </div>
                       <div className="flex items-center space-x-3">
                         <BarChart3 className="w-5 h-5 text-blue-400" />
-                        <span className="text-white/80 text-sm">Detailed performance analytics</span>
+                        <span className="text-white/80 dark:text-white/80 light:text-gray-600 text-sm">Detailed performance analytics</span>
                       </div>
                     </div>
                   </div>
@@ -1327,7 +1713,7 @@ export function TopicSelection() {
                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       <Button
                         onClick={handleStartQuiz}
-                        className="bg-gradient-to-r from-rose-500 to-violet-500 hover:from-rose-600 hover:to-violet-600 text-white font-semibold px-12 py-4 text-xl border-0 shadow-lg"
+                        className="bg-gradient-to-r from-rose-500 to-violet-500 hover:from-rose-600 hover:to-violet-600 text-white dark:text-white light:text-gray-800 font-semibold px-12 py-4 text-xl border-0 shadow-lg"
                         disabled={state.isLoading}
                         size="lg"
                       >
@@ -1370,7 +1756,7 @@ export function TopicSelection() {
                   className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 backdrop-blur-md mb-6 border border-white/20"
                   whileHover={{ scale: 1.1, rotate: 5 }}
                 >
-                  <Brain className="w-8 h-8 text-white" />
+                  <Brain className="w-8 h-8 text-white dark:text-white light:text-gray-800" />
                 </motion.div>
                 <h3 className="font-bold mb-3 text-white text-xl">AI-Generated Questions</h3>
                 <p className="text-white/80 leading-relaxed">
@@ -1382,7 +1768,7 @@ export function TopicSelection() {
                   className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 backdrop-blur-md mb-6 border border-white/20"
                   whileHover={{ scale: 1.1, rotate: -5 }}
                 >
-                  <Zap className="w-8 h-8 text-white" />
+                  <Zap className="w-8 h-8 text-white dark:text-white light:text-gray-800" />
                 </motion.div>
                 <h3 className="font-bold mb-3 text-white text-xl">Instant Feedback</h3>
                 <p className="text-white/80 leading-relaxed">
@@ -1394,7 +1780,7 @@ export function TopicSelection() {
                   className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 backdrop-blur-md mb-6 border border-white/20"
                   whileHover={{ scale: 1.1, rotate: 5 }}
                 >
-                  <Lightbulb className="w-8 h-8 text-white" />
+                  <Lightbulb className="w-8 h-8 text-white dark:text-white light:text-gray-800" />
                 </motion.div>
                 <h3 className="font-bold mb-3 text-white text-xl">Learn & Improve</h3>
                 <p className="text-white/80 leading-relaxed">

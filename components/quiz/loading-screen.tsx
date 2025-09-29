@@ -8,7 +8,8 @@ export function LoadingScreen() {
   const { state } = useQuizLogic()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-500 via-violet-500 to-blue-500 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 animated-gradient relative flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-rose-500 via-violet-500 to-blue-500 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 animated-gradient relative flex items-center justify-center
+      light:bg-gradient-to-br light:from-gray-50 light:via-white light:to-gray-100">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] pointer-events-none"></div>
       <div className="absolute top-0 left-0 w-full h-full">
@@ -28,11 +29,11 @@ export function LoadingScreen() {
               </div>
             </div>
 
-            <h2 className="text-2xl font-bold mb-4 text-white">Generating Your Quiz</h2>
+            <h2 className="text-2xl font-bold mb-4 text-white dark:text-white light:text-gray-800">Generating Your Quiz</h2>
 
-            <p className="text-white/80 mb-6 leading-relaxed">
+            <p className="text-white/80 dark:text-white/80 light:text-gray-600 mb-6 leading-relaxed">
               AI is creating personalized questions about{" "}
-              <span className="font-semibold text-white">{state.selectedTopic}</span>
+              <span className="font-semibold text-white dark:text-white light:text-gray-800">{state.selectedTopic}</span>
             </p>
 
             <div className="space-y-3">
